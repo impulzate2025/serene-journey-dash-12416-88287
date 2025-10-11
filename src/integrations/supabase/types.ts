@@ -14,16 +14,193 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      effect_templates: {
+        Row: {
+          category: string
+          color: string | null
+          created_at: string | null
+          description: string
+          icon: string | null
+          id: string
+          is_pro: boolean | null
+          name: string
+          popularity: number | null
+          prompt_template: string
+        }
+        Insert: {
+          category: string
+          color?: string | null
+          created_at?: string | null
+          description: string
+          icon?: string | null
+          id?: string
+          is_pro?: boolean | null
+          name: string
+          popularity?: number | null
+          prompt_template: string
+        }
+        Update: {
+          category?: string
+          color?: string | null
+          created_at?: string | null
+          description?: string
+          icon?: string | null
+          id?: string
+          is_pro?: boolean | null
+          name?: string
+          popularity?: number | null
+          prompt_template?: string
+        }
+        Relationships: []
+      }
+      generations: {
+        Row: {
+          ai_analysis: Json | null
+          created_at: string | null
+          duration: string | null
+          effect_category: string
+          effect_description: string | null
+          effect_type: string
+          generated_prompt: string
+          id: string
+          image_url: string | null
+          intensity: number | null
+          status: string | null
+          style: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          created_at?: string | null
+          duration?: string | null
+          effect_category: string
+          effect_description?: string | null
+          effect_type: string
+          generated_prompt: string
+          id?: string
+          image_url?: string | null
+          intensity?: number | null
+          status?: string | null
+          style?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_analysis?: Json | null
+          created_at?: string | null
+          duration?: string | null
+          effect_category?: string
+          effect_description?: string | null
+          effect_type?: string
+          generated_prompt?: string
+          id?: string
+          image_url?: string | null
+          intensity?: number | null
+          status?: string | null
+          style?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string
+          full_name: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email: string
+          full_name?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_credits: {
+        Row: {
+          created_at: string | null
+          credits: number | null
+          daily_credits: number | null
+          id: string
+          last_reset_date: string | null
+          total_used: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          credits?: number | null
+          daily_credits?: number | null
+          id?: string
+          last_reset_date?: string | null
+          total_used?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          credits?: number | null
+          daily_credits?: number | null
+          id?: string
+          last_reset_date?: string | null
+          total_used?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      reset_daily_credits: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "user" | "pro" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +327,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["user", "pro", "admin"],
+    },
   },
 } as const

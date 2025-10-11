@@ -4,8 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Upload, ArrowLeft, Zap, Copy, Check, Film, Home, History, Settings, HelpCircle } from "lucide-react";
+import { Sparkles, Upload, ArrowLeft, Zap, Copy, Check, Film, Home, History, Settings, HelpCircle, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { z } from "zod";
+
+const imageUploadSchema = z.object({
+  file: z.instanceof(File)
+    .refine((f) => f.size <= 10 * 1024 * 1024, 'File size must be less than 10MB')
+    .refine((f) => f.type.startsWith('image/'), 'File must be an image'),
+});
 
 const effectCategories = [
   {
@@ -42,6 +50,7 @@ const Generator = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const { toast } = useToast();
+  const { signOut } = useAuth();
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -54,13 +63,24 @@ const Generator = () => {
   };
 
   const handleFile = (file: File) => {
-    if (file.type.startsWith('image/')) {
+    try {
+      // Validate file
+      imageUploadSchema.parse({ file });
+      
       const reader = new FileReader();
       reader.onload = (e) => {
         setSelectedImage(e.target?.result as string);
         analyzeImage();
       };
       reader.readAsDataURL(file);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        toast({
+          title: "Invalid File",
+          description: err.errors[0].message,
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -122,8 +142,8 @@ const Generator = () => {
               <Zap className="w-4 h-4 text-primary" />
               <span className="font-semibold">127/500</span>
             </div>
-            <Button variant="ghost" size="icon">
-              <div className="w-8 h-8 bg-gradient-primary rounded-full" />
+            <Button variant="ghost" size="icon" onClick={() => signOut()}>
+              <LogOut className="w-5 h-5" />
             </Button>
           </div>
         </div>
