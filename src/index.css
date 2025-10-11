@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Flora-inspired Dark Theme */
+    --background: 0 0% 4%;
+    --foreground: 0 0% 100%;
+
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 100%;
+
+    /* Primary: Purple */
+    --primary: 270 91% 65%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 270 100% 75%;
+
+    /* Secondary: Pink */
+    --secondary: 330 81% 60%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Accent: Blue */
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Muted */
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 63%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders */
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
+    --ring: 270 91% 65%;
+
+    --radius: 0.75rem;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(270 91% 65%), hsl(330 81% 60%));
+    --gradient-accent: linear-gradient(135deg, hsl(330 81% 60%), hsl(217 91% 60%));
+    --gradient-hero: linear-gradient(180deg, hsl(0 0% 4%), hsl(0 0% 6%));
+    
+    /* Shadows */
+    --shadow-glow: 0 0 40px hsl(270 100% 75% / 0.2);
+    --shadow-card: 0 8px 24px hsl(0 0% 0% / 0.5);
+    
+    /* Effects */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Flora specific */
+    --flora-bg-primary: 0 0% 4%;
+    --flora-bg-secondary: 0 0% 10%;
+    --flora-bg-tertiary: 0 0% 16%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Large, accessible UI elements */
+  button {
+    @apply text-base;
+  }
+
+  input, textarea, select {
+    @apply text-base;
+  }
+}
