@@ -7,6 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sparkles, Upload, ArrowLeft, Zap, Copy, Check, Film, Home, History, Settings, HelpCircle, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/hooks/use-subscription";
+import { ProModeToggle } from "@/components/ProModeToggle";
+import { ProControls } from "@/components/ProControls";
+import { ProTeaser } from "@/components/ProTeaser";
+import { AIAnalysisDisplay } from "@/components/AIAnalysisDisplay";
+import { PromptEnhancer } from "@/components/PromptEnhancer";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
@@ -43,6 +49,7 @@ const Generator = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState<string>("");
+  const [enhancedPrompt, setEnhancedPrompt] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("visual");
   const [selectedEffect, setSelectedEffect] = useState("Portal Effect");
@@ -50,8 +57,14 @@ const Generator = () => {
   const [duration, setDuration] = useState("3");
   const [analyzing, setAnalyzing] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  
+  // NEW: Pro Mode State
+  const [isProMode, setIsProMode] = useState(false);
+  const [proSettings, setProSettings] = useState<any>({});
+  
   const { toast } = useToast();
   const { signOut } = useAuth();
+  const { subscription, canUseProFeatures, canGenerate } = useSubscription();
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -143,16 +156,29 @@ const Generator = () => {
       return;
     }
 
+    if (!canGenerate()) {
+      toast({
+        title: "Daily Limit Reached",
+        description: `You've used ${subscription.dailyGenerations}/${subscription.maxGenerations} generations today`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setAnalyzing(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-prompt', {
         body: {
-          effect: selectedEffect,
-          intensity: intensity[0],
+          // Use Pro effect selection if available, otherwise fallback to basic
+          effect: isProMode && proSettings.selectedEffect ? proSettings.selectedEffect : selectedEffect,
+          intensity: isProMode && proSettings.intensity ? proSettings.intensity : intensity[0],
           duration: duration,
           style: 'cinematic',
           analysis: aiAnalysis,
-          imageBase64: selectedImage
+          imageBase64: selectedImage,
+          // NEW: Pro Mode Settings
+          isProMode,
+          proSettings: isProMode ? proSettings : null
         }
       });
 
@@ -186,14 +212,32 @@ const Generator = () => {
     }
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(generatedPrompt);
-    setCopied(true);
-    toast({
-      title: "📋 Copiado",
-      description: "Prompt copiado al portapapeles",
-    });
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(generatedPrompt);
+      setCopied(true);
+      toast({
+        title: "📋 Copiado",
+        description: "Prompt copiado al portapapeles",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+      // Fallback method
+      const textArea = document.createElement('textarea');
+      textArea.value = generatedPrompt;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      setCopied(true);
+      toast({
+        title: "📋 Copiado",
+        description: "Prompt copiado al portapapeles",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
@@ -323,22 +367,10 @@ const Generator = () => {
 
             {/* AI Analysis Block */}
             {aiAnalysis && (
-              <Card className="bg-card border border-border animate-fade-in">
-                <div className="p-4 border-b border-border">
-                  <span className="text-sm font-medium">AI Analysis</span>
-                </div>
-                <div className="p-6 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Detected:</span>
-                  </div>
-                  <ul className="space-y-2 text-sm">
-                    <li>• Subject: <span className="text-foreground">{aiAnalysis.subject}</span></li>
-                    <li>• Style: <span className="text-foreground">{aiAnalysis.style}</span></li>
-                    <li>• Colors: <span className="text-foreground">{aiAnalysis.colors.join(", ")}</span></li>
-                    <li>• Lighting: <span className="text-foreground">{aiAnalysis.lighting}</span></li>
-                  </ul>
-                </div>
-              </Card>
+              <AIAnalysisDisplay 
+                analysis={aiAnalysis} 
+                isProMode={isProMode && canUseProFeatures()} 
+              />
             )}
 
             {/* Generate Button */}
@@ -356,47 +388,70 @@ const Generator = () => {
 
             {/* Generated Prompt Block */}
             {generatedPrompt && (
-              <Card className="bg-card border border-border animate-fade-in">
-                <div className="p-4 border-b border-border flex items-center justify-between">
-                  <span className="text-sm font-medium">Generated Prompt</span>
-                  <Button variant="ghost" size="sm" onClick={handleCopy}>
-                    {copied ? (
-                      <>
-                        <Check className="w-4 h-4" />
-                        Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4" />
-                        Copy
-                      </>
-                    )}
-                  </Button>
-                </div>
-                <div className="p-6">
-                  <p className="text-sm leading-relaxed text-foreground/90">{generatedPrompt}</p>
-                </div>
-              </Card>
+              <div className="space-y-4">
+                <Card className="bg-card border border-border animate-fade-in">
+                  <div className="p-4 border-b border-border flex items-center justify-between">
+                    <span className="text-sm font-medium">Generated Prompt</span>
+                    <Button variant="ghost" size="sm" onClick={handleCopy}>
+                      {copied ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          Copy
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <div className="p-6">
+                    <p className="text-sm leading-relaxed text-foreground/90">{generatedPrompt}</p>
+                  </div>
+                </Card>
+
+                {/* Prompt Enhancer - Only show in Pro Mode */}
+                {isProMode && canUseProFeatures() && (
+                  <PromptEnhancer
+                    originalPrompt={generatedPrompt}
+                    proSettings={proSettings}
+                    onEnhancedPrompt={setEnhancedPrompt}
+                  />
+                )}
+              </div>
             )}
           </div>
         </main>
 
         {/* Right Sidebar - Settings Panel */}
-        <aside className="w-80 border-l border-border bg-card overflow-y-auto">
-          <div className="p-6 space-y-6">
-            <div className="space-y-3">
-              <label className="text-sm font-medium">Effect Category</label>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-full bg-muted border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border">
-                  {effectCategories.map(cat => (
-                    <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <aside className="w-96 border-l border-border bg-card overflow-y-auto">
+          <div className="p-4 space-y-4">
+            {/* Pro Mode Toggle */}
+            <ProModeToggle 
+              isProMode={isProMode} 
+              onToggle={setIsProMode}
+            />
+
+            {/* Show Pro Controls or Basic Controls */}
+            {isProMode && canUseProFeatures() ? (
+              <ProControls onSettingsChange={setProSettings} />
+            ) : (
+              <>
+                {/* Basic Controls (Existing) */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium">Effect Category</label>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="w-full bg-muted border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {effectCategories.map(cat => (
+                        <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
             <div className="space-y-3">
               <label className="text-sm font-medium">Effect Type</label>
@@ -442,20 +497,27 @@ const Generator = () => {
               </Select>
             </div>
 
-            <div className="space-y-3">
-              <label className="text-sm font-medium">Style</label>
-              <Select defaultValue="cinematic">
-                <SelectTrigger className="w-full bg-muted border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border">
-                  <SelectItem value="cinematic">Cinematic</SelectItem>
-                  <SelectItem value="dramatic">Dramatic</SelectItem>
-                  <SelectItem value="moody">Moody</SelectItem>
-                  <SelectItem value="neon">Neon</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                <div className="space-y-3">
+                  <label className="text-sm font-medium">Style</label>
+                  <Select defaultValue="cinematic">
+                    <SelectTrigger className="w-full bg-muted border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      <SelectItem value="cinematic">Cinematic</SelectItem>
+                      <SelectItem value="dramatic">Dramatic</SelectItem>
+                      <SelectItem value="moody">Moody</SelectItem>
+                      <SelectItem value="neon">Neon</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Pro Teaser for Freemium Users */}
+                {!canUseProFeatures() && (
+                  <ProTeaser />
+                )}
+              </>
+            )}
           </div>
         </aside>
       </div>
