@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sparkles, Upload, ArrowLeft, Zap, Copy, Check, Film, Home, History, Settings, HelpCircle, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
 const imageUploadSchema = z.object({
@@ -91,27 +92,95 @@ const Generator = () => {
     }
   };
 
-  const analyzeImage = () => {
+  const analyzeImage = async () => {
+    if (!selectedImage) return;
+    
     setAnalyzing(true);
-    // Simulación de análisis AI
-    setTimeout(() => {
-      setAiAnalysis({
-        subject: "Urban artist",
-        style: "Night photography",
-        colors: ["Blue", "Pink", "Purple"],
-        lighting: "Dramatic"
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-image', {
+        body: { imageBase64: selectedImage }
       });
+
+      if (error) {
+        console.error('Analysis error:', error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to analyze image",
+          variant: "destructive",
+        });
+        setAnalyzing(false);
+        return;
+      }
+
+      if (data?.analysis) {
+        setAiAnalysis(data.analysis);
+        toast({
+          title: "✨ Image Analyzed",
+          description: "AI has analyzed your image successfully",
+        });
+      }
+    } catch (err) {
+      console.error('Analysis error:', err);
+      toast({
+        title: "Error",
+        description: "Failed to analyze image",
+        variant: "destructive",
+      });
+    } finally {
       setAnalyzing(false);
-    }, 1500);
+    }
   };
 
-  const handleGenerate = () => {
-    setGeneratedPrompt(`Cinematic ${selectedEffect.toLowerCase()} sequence. Subject stands at 2 meters from camera. Dramatic lighting with volumetric fog. Camera performs slow dolly in (${duration}s) while portal materializes behind subject with swirling purple energy particles. Effect intensity: ${intensity[0]}%. Portal diameter: 3 meters. Particle density increases progressively. Lens: 35mm, f/2.0. Motion blur on particles. Subject remains in sharp focus as portal reaches full brightness. VFX: Chromatic aberration on portal edges, god rays, atmospheric depth.`);
-    
-    toast({
-      title: "✨ Prompt Generado",
-      description: "Tu prompt está listo para usar",
-    });
+  const handleGenerate = async () => {
+    if (!selectedImage) {
+      toast({
+        title: "Error",
+        description: "Please upload an image first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAnalyzing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-prompt', {
+        body: {
+          effect: selectedEffect,
+          intensity: intensity[0],
+          duration: duration,
+          style: 'cinematic',
+          analysis: aiAnalysis
+        }
+      });
+
+      if (error) {
+        console.error('Generation error:', error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to generate prompt",
+          variant: "destructive",
+        });
+        setAnalyzing(false);
+        return;
+      }
+
+      if (data?.prompt) {
+        setGeneratedPrompt(data.prompt);
+        toast({
+          title: "✨ Prompt Generated",
+          description: "Your cinematic prompt is ready!",
+        });
+      }
+    } catch (err) {
+      console.error('Generation error:', err);
+      toast({
+        title: "Error",
+        description: "Failed to generate prompt",
+        variant: "destructive",
+      });
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   const handleCopy = () => {
@@ -275,9 +344,10 @@ const Generator = () => {
                 size="lg" 
                 className="w-full bg-gradient-primary hover:opacity-90"
                 onClick={handleGenerate}
+                disabled={analyzing}
               >
                 <Sparkles className="w-5 h-5" />
-                ✨ Generate Prompt
+                {analyzing ? "Generating..." : "✨ Generate Prompt"}
               </Button>
             )}
 
