@@ -34,7 +34,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-flash-image-preview",
         messages: [
           {
             role: "system",
@@ -57,6 +57,7 @@ serve(async (req) => {
           }
         ],
         temperature: 0.7,
+        modalities: ["image", "text"]
       }),
     });
 

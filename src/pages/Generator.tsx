@@ -70,8 +70,9 @@ const Generator = () => {
       
       const reader = new FileReader();
       reader.onload = (e) => {
-        setSelectedImage(e.target?.result as string);
-        analyzeImage();
+        const img = e.target?.result as string;
+        setSelectedImage(img);
+        analyzeImage(img);
       };
       reader.readAsDataURL(file);
     } catch (err) {
@@ -92,13 +93,14 @@ const Generator = () => {
     }
   };
 
-  const analyzeImage = async () => {
-    if (!selectedImage) return;
-    
+  const analyzeImage = async (image?: string) => {
+    const img = image ?? selectedImage;
+    if (!img) return;
+
     setAnalyzing(true);
     try {
       const { data, error } = await supabase.functions.invoke('analyze-image', {
-        body: { imageBase64: selectedImage }
+        body: { imageBase64: img }
       });
 
       if (error) {
@@ -149,7 +151,8 @@ const Generator = () => {
           intensity: intensity[0],
           duration: duration,
           style: 'cinematic',
-          analysis: aiAnalysis
+          analysis: aiAnalysis,
+          imageBase64: selectedImage
         }
       });
 

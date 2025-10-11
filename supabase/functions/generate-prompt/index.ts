@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { effect, intensity, duration, style, analysis } = await req.json();
+    const { effect, intensity, duration, style, analysis, imageBase64 } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -43,14 +43,24 @@ Generate a professional prompt that describes the shot, camera movement, VFX det
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        temperature: 0.8,
-      }),
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image-preview",
+          messages: [
+            { role: "system", content: systemPrompt },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: `${userPrompt}\n\nIMPORTANTE: Basar el prompt estrictamente en la imagen de referencia si se provee. No inventes escenarios que no estén presentes.`
+                },
+                ...(imageBase64 ? [{ type: "image_url", image_url: { url: imageBase64 } }] : [])
+              ]
+            }
+          ],
+          temperature: 0.7,
+          modalities: ["image", "text"]
+        }),
     });
 
     if (!response.ok) {
