@@ -127,7 +127,7 @@ RULES:
     console.log("Raw AI response length:", content.length);
 
     // Try to parse JSON from the response
-    let analysis;
+    let analysis: Record<string, any>;
     try {
       // Extract JSON from markdown code blocks if present
       const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/\{[\s\S]*\}/);
