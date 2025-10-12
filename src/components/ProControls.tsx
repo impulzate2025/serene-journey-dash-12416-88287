@@ -99,6 +99,16 @@ export const ProControls = ({ onSettingsChange, imageAnalysis, selectedEffect }:
 
     const updateSetting = (key: string, value: any) => {
         const newSettings = { ...settings, [key]: value };
+        
+        // 🎯 SYNC: If selecting a camera effect, auto-update cameraMovement
+        if (key === 'selectedEffect' && settings.effectCategory === 'camera') {
+            const cameraEffects = ['crash-zoom', 'dolly-zoom', 'fpv-drone', '360-orbit', 'crane-shot', 'handheld'];
+            if (cameraEffects.includes(value)) {
+                newSettings.cameraMovement = value;
+                console.log(`🔄 ProControls: Auto-synced cameraMovement to ${value}`);
+            }
+        }
+        
         console.log(`🎛️ ProControls: Updated ${key} = ${value}`);
         console.log('📋 Full settings:', newSettings);
         setSettings(newSettings);
@@ -166,6 +176,18 @@ export const ProControls = ({ onSettingsChange, imageAnalysis, selectedEffect }:
                             {selectedEffectData.description}
                         </div>
                     )}
+
+                    {/* Active Effect Badge */}
+                    <div className="flex items-center gap-2 mt-2 p-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded border border-purple-500/20">
+                        <Zap className="w-3 h-3 text-purple-500" />
+                        <span className="text-xs font-medium text-purple-500">Active Effect:</span>
+                        <Badge variant="secondary" className="text-xs">
+                            {selectedEffectData?.name || settings.selectedEffect}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                            {settings.effectCategory}
+                        </Badge>
+                    </div>
                 </div>
             </Card>
 
@@ -253,6 +275,12 @@ export const ProControls = ({ onSettingsChange, imageAnalysis, selectedEffect }:
                                     <SelectItem value="dolly-in">Dolly in</SelectItem>
                                     <SelectItem value="dolly-out">Dolly out</SelectItem>
                                     <SelectItem value="pan">Pan left/right</SelectItem>
+                                    <SelectItem value="crash-zoom">Crash Zoom</SelectItem>
+                                    <SelectItem value="dolly-zoom">Dolly Zoom (Vertigo)</SelectItem>
+                                    <SelectItem value="fpv-drone">FPV Drone</SelectItem>
+                                    <SelectItem value="360-orbit">360° Orbit</SelectItem>
+                                    <SelectItem value="crane-shot">Crane Up/Down</SelectItem>
+                                    <SelectItem value="handheld">Handheld</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

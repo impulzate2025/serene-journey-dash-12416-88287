@@ -176,7 +176,13 @@ serve(async (req: Request) => {
       const movementMap: Record<string, string> = {
         'dolly-out': 'dolly-out movement (camera pulls back)',
         'static': 'static camera (no movement)',
-        'pan': 'panning movement (left to right)'
+        'pan': 'panning movement (left to right)',
+        'crash-zoom': 'crash zoom in - dramatic high-speed zoom towards subject',
+        'dolly-zoom': 'dolly zoom (Vertigo effect) - counter zoom while moving',
+        'fpv-drone': 'FPV drone shot - dynamic first-person view drone cinematography',
+        '360-orbit': '360-degree orbital drone movement - complete circular orbit around subject',
+        'crane-shot': 'crane movement - vertical camera elevation change (up or down)',
+        'handheld': 'handheld camera - documentary-style natural camera shake'
       };
       instructions += `- Change camera movement to: ${movementMap[proSettings.cameraMovement] || proSettings.cameraMovement}\n`;
     }
