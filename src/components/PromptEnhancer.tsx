@@ -409,8 +409,176 @@ export const PromptEnhancer = ({ originalPrompt, proSettings, onEnhancedPrompt }
         </div>
       </div>
 
-      <div className="text-xs text-gray-300 mb-3">
-        Choose which categories to enhance:
+      {/* 🎛️ ENHANCEMENT TOGGLES - MOVED TO TOP FOR BETTER UX */}
+      <div className="mb-4 p-3 bg-gradient-to-r from-gray-900/80 to-gray-800/80 rounded-lg border border-gray-600">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <Label className="text-xs font-medium text-cyan-300">Enhancement Categories</Label>
+            <Badge variant="outline" className="text-xs">
+              {Object.values(enhancementToggles).filter(Boolean).length}/6 Active
+            </Badge>
+          </div>
+          
+          {/* 🚀 QUICK ACTIONS */}
+          <div className="flex gap-1">
+            <Button
+              onClick={() => {
+                const allEnabled = {
+                  camera: true,
+                  movement: true,
+                  vfx: true,
+                  particles: true,
+                  lighting: true,
+                  style: true
+                };
+                setEnhancementToggles(allEnabled);
+              }}
+              size="sm"
+              variant="outline"
+              className="h-6 px-2 text-xs text-green-400 border-green-500 hover:bg-green-900/20"
+            >
+              All
+            </Button>
+            <Button
+              onClick={() => {
+                const allDisabled = {
+                  camera: false,
+                  movement: false,
+                  vfx: false,
+                  particles: false,
+                  lighting: false,
+                  style: false
+                };
+                setEnhancementToggles(allDisabled);
+              }}
+              size="sm"
+              variant="outline"
+              className="h-6 px-2 text-xs text-red-400 border-red-500 hover:bg-red-900/20"
+            >
+              None
+            </Button>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Camera className="w-4 h-4 text-blue-400" />
+              <Label className="text-xs font-medium text-white">Camera</Label>
+            </div>
+            <Switch
+              checked={enhancementToggles.camera}
+              onCheckedChange={() => toggleEnhancement('camera')}
+              className="scale-75"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Move className="w-4 h-4 text-green-400" />
+              <Label className="text-xs font-medium text-white">Movement</Label>
+            </div>
+            <Switch
+              checked={enhancementToggles.movement}
+              onCheckedChange={() => toggleEnhancement('movement')}
+              className="scale-75"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-yellow-400" />
+              <Label className="text-xs font-medium text-white">VFX</Label>
+            </div>
+            <Switch
+              checked={enhancementToggles.vfx}
+              onCheckedChange={() => toggleEnhancement('vfx')}
+              className="scale-75"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Atom className="w-4 h-4 text-purple-400" />
+              <Label className="text-xs font-medium text-white">Particles</Label>
+            </div>
+            <Switch
+              checked={enhancementToggles.particles}
+              onCheckedChange={() => toggleEnhancement('particles')}
+              className="scale-75"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 text-orange-400" />
+              <Label className="text-xs font-medium text-white">Lighting</Label>
+            </div>
+            <Switch
+              checked={enhancementToggles.lighting}
+              onCheckedChange={() => toggleEnhancement('lighting')}
+              className="scale-75"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Palette className="w-4 h-4 text-pink-400" />
+              <Label className="text-xs font-medium text-white">Style</Label>
+            </div>
+            <Switch
+              checked={enhancementToggles.style}
+              onCheckedChange={() => toggleEnhancement('style')}
+              className="scale-75"
+            />
+          </div>
+        </div>
+        
+        {/* 🎯 ACTIVE TOGGLES PREVIEW */}
+        {Object.values(enhancementToggles).some(v => v) && (
+          <div className="mt-3 p-2 bg-black/30 rounded border border-gray-600">
+            <div className="text-xs text-gray-400 font-medium mb-1">Will enhance:</div>
+            <div className="flex flex-wrap gap-1">
+              {enhancementToggles.camera && (
+                <Badge variant="outline" className="text-xs bg-blue-900/30 border-blue-400 text-blue-200">
+                  <Camera className="w-3 h-3 mr-1" />
+                  Camera
+                </Badge>
+              )}
+              {enhancementToggles.movement && (
+                <Badge variant="outline" className="text-xs bg-green-900/30 border-green-400 text-green-200">
+                  <Move className="w-3 h-3 mr-1" />
+                  Movement
+                </Badge>
+              )}
+              {enhancementToggles.vfx && (
+                <Badge variant="outline" className="text-xs bg-yellow-900/30 border-yellow-400 text-yellow-200">
+                  <Zap className="w-3 h-3 mr-1" />
+                  VFX
+                </Badge>
+              )}
+              {enhancementToggles.particles && (
+                <Badge variant="outline" className="text-xs bg-purple-900/30 border-purple-400 text-purple-200">
+                  <Atom className="w-3 h-3 mr-1" />
+                  Particles
+                </Badge>
+              )}
+              {enhancementToggles.lighting && (
+                <Badge variant="outline" className="text-xs bg-orange-900/30 border-orange-400 text-orange-200">
+                  <Lightbulb className="w-3 h-3 mr-1" />
+                  Lighting
+                </Badge>
+              )}
+              {enhancementToggles.style && (
+                <Badge variant="outline" className="text-xs bg-pink-900/30 border-pink-400 text-pink-200">
+                  <Palette className="w-3 h-3 mr-1" />
+                  Style
+                </Badge>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Auto-detection info */}
@@ -431,80 +599,7 @@ export const PromptEnhancer = ({ originalPrompt, proSettings, onEnhancedPrompt }
         </div>
       )}
 
-      {/* 🎛️ ENHANCEMENT TOGGLES */}
-      <div className="grid grid-cols-3 gap-3 mb-4 p-3 bg-gray-900 rounded-lg border border-gray-700">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Camera className="w-4 h-4 text-blue-400" />
-            <Label className="text-xs font-medium text-white">Camera</Label>
-          </div>
-          <Switch
-            checked={enhancementToggles.camera}
-            onCheckedChange={() => toggleEnhancement('camera')}
-            className="scale-75"
-          />
-        </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Move className="w-4 h-4 text-green-400" />
-            <Label className="text-xs font-medium text-white">Movement</Label>
-          </div>
-          <Switch
-            checked={enhancementToggles.movement}
-            onCheckedChange={() => toggleEnhancement('movement')}
-            className="scale-75"
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-yellow-400" />
-            <Label className="text-xs font-medium text-white">VFX</Label>
-          </div>
-          <Switch
-            checked={enhancementToggles.vfx}
-            onCheckedChange={() => toggleEnhancement('vfx')}
-            className="scale-75"
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Atom className="w-4 h-4 text-purple-400" />
-            <Label className="text-xs font-medium text-white">Particles</Label>
-          </div>
-          <Switch
-            checked={enhancementToggles.particles}
-            onCheckedChange={() => toggleEnhancement('particles')}
-            className="scale-75"
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Lightbulb className="w-4 h-4 text-orange-400" />
-            <Label className="text-xs font-medium text-white">Lighting</Label>
-          </div>
-          <Switch
-            checked={enhancementToggles.lighting}
-            onCheckedChange={() => toggleEnhancement('lighting')}
-            className="scale-75"
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Palette className="w-4 h-4 text-pink-400" />
-            <Label className="text-xs font-medium text-white">Style</Label>
-          </div>
-          <Switch
-            checked={enhancementToggles.style}
-            onCheckedChange={() => toggleEnhancement('style')}
-            className="scale-75"
-          />
-        </div>
-      </div>
 
       {/* Pro Settings Preview - Visual feedback de qué se aplicará */}
       <div className="grid grid-cols-3 gap-2 mb-3 text-xs">

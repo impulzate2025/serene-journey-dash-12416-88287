@@ -126,13 +126,18 @@ npm run preview  # Preview del build
 - Generación básica de prompts
 - Interfaz de usuario completa
 - Controles Pro Mode
+- **Sistema de enhancement de prompts funcionando**
+- **Movement selector expandido (10 opciones)**
+- **Badge visual "Active Effect"**
+- **Sincronización automática camera effect → movement**
+- **Backend actualizado con descripciones detalladas**
 
 ⚠️ **En Desarrollo**:
-- Sistema de enhancement de prompts (tiene bugs)
 - Optimización de la IA
 - Biblioteca de prompts
+- Sistema de créditos
 
-🔴 **Problemas Conocidos**:
-- Enhancement de prompts no funciona correctamente
-- Error 401 en algunas llamadas a funciones
-- Logs de debugging incompletos
+✅ **Recientemente Solucionado**:
+- Enhancement de prompts funcionando correctamente
+- Función enhance-prompt deployada y operativa
+- Logging completo implementado

@@ -132,6 +132,15 @@ serve(async (req: Request) => {
     console.log("🎛️ ENHANCE-PROMPT: Enhancement toggles:", enhancementToggles);
     console.log("📋 ENHANCE-PROMPT: Filtered settings received:", JSON.stringify(proSettings, null, 2));
     console.log("📋 ENHANCE-PROMPT: Original prompt preview:", originalPrompt.substring(0, 150) + "...");
+    
+    // 🎬 SPECIFIC DEBUGGING FOR CAMERA ANGLE
+    if (proSettings.cameraAngle) {
+      console.log("🎬 ENHANCE-PROMPT: Camera angle specified:", proSettings.cameraAngle);
+      console.log("🎬 ENHANCE-PROMPT: This should appear in final result as:", proSettings.cameraAngle);
+    }
+    if (proSettings.shotType) {
+      console.log("📐 ENHANCE-PROMPT: Shot type specified:", proSettings.shotType);
+    }
 
     // Build enhancement instructions based on active toggles
     let instructions = "Rewrite this video prompt by naturally integrating ONLY these specific changes:\n\n";
@@ -154,8 +163,9 @@ serve(async (req: Request) => {
       );
     }
 
-    if (proSettings.shotType && proSettings.shotType !== 'medium') {
+    if (proSettings.shotType) {
       const shotMap: Record<string, string> = {
+        'medium': 'medium shot',
         'wide': 'wide shot',
         'close-up': 'close-up shot',
         'extreme-close': 'extreme close-up shot'
@@ -163,9 +173,10 @@ serve(async (req: Request) => {
       instructions += `- Change camera framing to: ${shotMap[proSettings.shotType] || proSettings.shotType}\n`;
     }
 
-    if (proSettings.cameraAngle && proSettings.cameraAngle !== 'high-angle') {
+    if (proSettings.cameraAngle) {
       const angleMap: Record<string, string> = {
-        'eye-level': 'eye-level angle',
+        'high-angle': 'high-angle',
+        'eye-level': 'eye-level angle', 
         'low-angle': 'low-angle',
         'birds-eye': 'bird\'s eye view'
       };
@@ -173,18 +184,52 @@ serve(async (req: Request) => {
     }
 
     if (proSettings.cameraMovement && proSettings.cameraMovement !== 'dolly-in') {
-      const movementMap: Record<string, string> = {
-        'dolly-out': 'dolly-out movement (camera pulls back)',
-        'static': 'static camera (no movement)',
-        'pan': 'panning movement (left to right)',
-        'crash-zoom': 'crash zoom in - dramatic high-speed zoom towards subject',
-        'dolly-zoom': 'dolly zoom (Vertigo effect) - counter zoom while moving',
-        'fpv-drone': 'FPV drone shot - dynamic first-person view drone cinematography',
-        '360-orbit': '360-degree orbital drone movement - complete circular orbit around subject',
-        'crane-shot': 'crane movement - vertical camera elevation change (up or down)',
-        'handheld': 'handheld camera - documentary-style natural camera shake'
+      // 🎯 INTELLIGENT MOVEMENT COMBINATIONS - Known working patterns
+      const getIntelligentMovementDescription = () => {
+        const { cameraMovement, movementDirection, movementSpeed, movementStyle } = proSettings;
+        
+        // 🚁 SPECIAL COMBINATIONS - Proven to work with AI
+        const specialCombinations: Record<string, string> = {
+          'fpv-drone+top-view': 'FPV drone 360 movement',
+          'fpv-drone+spiral': 'FPV drone spiral 360 movement',
+          '360-orbit+top-view': '360 degree orbital movement',
+          '360-orbit+spiral': 'spiral 360 degree orbital movement',
+          'crash-zoom+dramatic': 'dramatic crash zoom movement',
+          'crash-zoom+fast': 'high-speed crash zoom movement',
+          'dolly-zoom+dramatic': 'dramatic dolly zoom (Vertigo effect)',
+          'crane-shot+spiral': 'spiral crane movement'
+        };
+        
+        // Check for special combinations first
+        const combinationKey = `${cameraMovement}+${movementDirection}`;
+        const speedCombinationKey = `${cameraMovement}+${movementSpeed}`;
+        
+        if (specialCombinations[combinationKey]) {
+          return specialCombinations[combinationKey];
+        }
+        
+        if (specialCombinations[speedCombinationKey]) {
+          return specialCombinations[speedCombinationKey];
+        }
+        
+        // 🎬 FALLBACK: Use traditional mapping
+        const movementMap: Record<string, string> = {
+          'dolly-out': 'dolly-out movement (camera pulls back)',
+          'static': 'static camera (no movement)',
+          'pan': 'panning movement (left to right)',
+          'crash-zoom': 'crash zoom in - dramatic high-speed zoom towards subject',
+          'dolly-zoom': 'dolly zoom (Vertigo effect) - counter zoom while moving',
+          'fpv-drone': 'FPV drone shot - dynamic first-person view drone cinematography',
+          '360-orbit': '360-degree orbital drone movement - complete circular orbit around subject',
+          'crane-shot': 'crane movement - vertical camera elevation change (up or down)',
+          'handheld': 'handheld camera - documentary-style natural camera shake'
+        };
+        
+        return movementMap[cameraMovement] || cameraMovement;
       };
-      instructions += `- Change camera movement to: ${movementMap[proSettings.cameraMovement] || proSettings.cameraMovement}\n`;
+      
+      const intelligentMovement = getIntelligentMovementDescription();
+      instructions += `- Change camera movement to: ${intelligentMovement}\n`;
     }
 
     if (proSettings.lensType) {
@@ -273,9 +318,10 @@ serve(async (req: Request) => {
       instructions += `- If it says "360 orbit movement", the camera MUST do a complete 360-degree orbital shot\n`;
     }
 
-    instructions += `\nCINEMATOGRAPHY REQUIREMENTS:
+    instructions += `\n🚨 CRITICAL CINEMATOGRAPHY REQUIREMENTS 🚨:
 - Keep the same subject, setting, and basic scene
-- Naturally integrate changes into existing descriptions
+- MANDATORY: Apply ALL specified camera changes (shot type, angle, movement)
+- DO NOT ignore camera angle specifications - they are REQUIRED
 - DO NOT add separate sections, headers, or introductory phrases
 - Target exactly ${targetWordCount} words (±15 words acceptable)
 - Include technical specs: aperture (f/2.8, f/4), shutter speed (1/60, 1/120), frame rate (24fps, 60fps)
@@ -285,8 +331,14 @@ serve(async (req: Request) => {
 - If Advanced Instructions conflict with basic settings, Advanced Instructions WIN
 - START IMMEDIATELY with the scene description, no preamble
 
+🎬 CAMERA ANGLE ENFORCEMENT:
+- If specified "high-angle" → MUST use "high-angle" in result
+- If specified "low-angle" → MUST use "low-angle" in result  
+- If specified "eye-level" → MUST use "eye-level" in result
+- If specified "bird's eye" → MUST use "bird's eye view" in result
+
 EXAMPLE CORRECT FORMAT:
-"A wide shot at eye-level captures a stylish man in black sequined jacket, camera executing complete 360-degree orbital drone movement around the subject over 5 seconds using 24mm wide-angle lens at f/2.8 aperture..."
+"A wide shot at high-angle captures a stylish man in black sequined jacket, camera executing complete 360-degree orbital drone movement around the subject over 5 seconds using 24mm wide-angle lens at f/2.8 aperture..."
 
 WRONG FORMAT:
 "Here's a cinematic VFX prompt based on the provided image: **Shot Description:** A dynamic..."`;
@@ -304,6 +356,8 @@ FORBIDDEN ACTIONS:
 ❌ NEVER write "Here's a..." or "Here is a..." 
 ❌ NEVER use "**Shot Description:**" or any headers
 ❌ NEVER use bullet points or sections
+❌ NEVER ignore camera angle specifications
+❌ NEVER ignore shot type specifications
 ❌ NEVER ignore Advanced Instructions (they override everything)
 ❌ NEVER change the subject or basic scene
 
@@ -312,12 +366,19 @@ REQUIRED ACTIONS:
 ✅ Write as ONE continuous paragraph
 ✅ Keep word count: ${targetWordCount - 15} to ${targetWordCount + 15} words
 ✅ Apply ALL specified changes naturally
+✅ ENFORCE camera angle exactly as specified
 ✅ If Advanced Instructions mention "360 orbit", camera MUST do 360-degree orbital movement
 
-EXAMPLE CORRECT OUTPUT:
-"A wide shot at bird's eye view captures a stylish man in black sequined jacket, camera executing complete 360-degree orbital drone movement around the subject over 5 seconds using 24mm wide-angle lens..."
+🎬 CAMERA ANGLE ENFORCEMENT - ABSOLUTE PRIORITY:
+- If instructions say "high-angle" → Result MUST contain "high-angle"
+- If instructions say "low-angle" → Result MUST contain "low-angle"  
+- If instructions say "eye-level" → Result MUST contain "eye-level"
+- If instructions say "bird's eye" → Result MUST contain "bird's eye view"
 
-You will be REJECTED if you start with introductory phrases or use headers.`;
+EXAMPLE CORRECT OUTPUT:
+"A wide shot at high-angle captures a stylish man in black sequined jacket, camera executing complete 360-degree orbital drone movement around the subject over 5 seconds using 24mm wide-angle lens..."
+
+You will be REJECTED if you start with introductory phrases, use headers, or ignore camera specifications.`;
 
     const userPrompt = `TASK: Rewrite this video prompt by applying these changes:
 
@@ -376,6 +437,66 @@ REWRITE:`;
     // Clean up extra whitespace
     enhancedPrompt = enhancedPrompt.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
 
+    // 🚨 FORCE CAMERA SPECIFICATIONS - AI Override Protection
+    console.log("🔧 ENHANCE-PROMPT: Starting forced camera specification enforcement...");
+    
+    if (proSettings.cameraAngle) {
+      console.log("🎬 ENHANCE-PROMPT: Forcing camera angle:", proSettings.cameraAngle);
+      
+      // Remove conflicting angles first
+      enhancedPrompt = enhancedPrompt.replace(/\b(low-angle|eye-level|bird's eye view|worm's-eye view|high-angle)\b/gi, '');
+      enhancedPrompt = enhancedPrompt.replace(/\bstarting from a worm's-eye view\b/gi, '');
+      enhancedPrompt = enhancedPrompt.replace(/\bfrom below\b/gi, '');
+      enhancedPrompt = enhancedPrompt.replace(/\bfrom above\b/gi, '');
+      
+      // Force the correct angle
+      const angleReplacements: Record<string, string> = {
+        'high-angle': 'high-angle',
+        'low-angle': 'low-angle', 
+        'eye-level': 'eye-level',
+        'birds-eye': 'bird\'s eye view'
+      };
+      
+      const correctAngle = angleReplacements[proSettings.cameraAngle];
+      if (correctAngle) {
+        // Replace the shot description with correct angle
+        enhancedPrompt = enhancedPrompt.replace(
+          /^A\s+(wide shot|medium shot|close-up shot|extreme close-up shot)\s+at\s+\w+/i,
+          `A ${proSettings.shotType === 'wide' ? 'wide shot' : proSettings.shotType === 'close-up' ? 'close-up shot' : 'medium shot'} at ${correctAngle}`
+        );
+        
+        // If the replacement didn't work, force it at the beginning
+        if (!enhancedPrompt.includes(correctAngle)) {
+          enhancedPrompt = enhancedPrompt.replace(
+            /^A\s+(wide shot|medium shot|close-up shot|extreme close-up shot)/i,
+            `A ${proSettings.shotType === 'wide' ? 'wide shot' : proSettings.shotType === 'close-up' ? 'close-up shot' : 'medium shot'} at ${correctAngle}`
+          );
+        }
+        
+        console.log("✅ ENHANCE-PROMPT: Camera angle forced to:", correctAngle);
+      }
+    }
+    
+    if (proSettings.shotType) {
+      console.log("📐 ENHANCE-PROMPT: Forcing shot type:", proSettings.shotType);
+      
+      const shotReplacements: Record<string, string> = {
+        'wide': 'wide shot',
+        'medium': 'medium shot',
+        'close-up': 'close-up shot',
+        'extreme-close': 'extreme close-up shot'
+      };
+      
+      const correctShot = shotReplacements[proSettings.shotType];
+      if (correctShot) {
+        enhancedPrompt = enhancedPrompt.replace(
+          /^A\s+(wide shot|medium shot|close-up shot|extreme close-up shot)/i,
+          `A ${correctShot}`
+        );
+        console.log("✅ ENHANCE-PROMPT: Shot type forced to:", correctShot);
+      }
+    }
+
     // Ensure it starts correctly
     if (!enhancedPrompt.match(/^A\s+(wide|medium|close-up|extreme)/i)) {
       console.log("⚠️ ENHANCE-PROMPT: AI didn't follow format, attempting to fix...");
@@ -390,12 +511,44 @@ REWRITE:`;
       }
     }
 
+    // 🚨 FINAL VERIFICATION AND NUCLEAR OPTION
+    if (proSettings.cameraAngle && proSettings.shotType) {
+      const expectedStart = `A ${proSettings.shotType === 'wide' ? 'wide shot' : proSettings.shotType === 'close-up' ? 'close-up shot' : 'medium shot'} at ${proSettings.cameraAngle}`;
+      
+      if (!enhancedPrompt.toLowerCase().startsWith(expectedStart.toLowerCase())) {
+        console.log("🚨 ENHANCE-PROMPT: NUCLEAR OPTION - Forcing correct start");
+        console.log("Expected start:", expectedStart);
+        console.log("Actual start:", enhancedPrompt.substring(0, 50));
+        
+        // Nuclear option: Replace the entire beginning
+        const restOfPrompt = enhancedPrompt.replace(/^A\s+[^,]+,?\s*/i, '');
+        enhancedPrompt = `${expectedStart} captures ${restOfPrompt}`;
+        
+        console.log("🔧 ENHANCE-PROMPT: Applied nuclear fix, new start:", enhancedPrompt.substring(0, 50));
+      }
+    }
+
     const finalWordCount = enhancedPrompt.trim().split(/\s+/).length;
 
     console.log("✅ ENHANCE-PROMPT: Enhancement completed successfully");
     console.log("📊 ENHANCE-PROMPT: Final word count:", finalWordCount);
     console.log("📊 ENHANCE-PROMPT: Target range:", targetWordCount - 15, "-", targetWordCount + 15);
     console.log("📋 ENHANCE-PROMPT: Enhanced prompt preview:", enhancedPrompt.substring(0, 150) + "...");
+    
+    // 🔍 VERIFICATION: Check if forced changes were applied
+    if (proSettings.cameraAngle) {
+      const hasCorrectAngle = enhancedPrompt.toLowerCase().includes(proSettings.cameraAngle.toLowerCase());
+      console.log(`🎬 ENHANCE-PROMPT: Camera angle verification - Expected: ${proSettings.cameraAngle}, Found: ${hasCorrectAngle ? '✅' : '❌'}`);
+      if (!hasCorrectAngle) {
+        console.log("🚨 ENHANCE-PROMPT: WARNING - Camera angle not found in result!");
+      }
+    }
+    
+    if (proSettings.shotType) {
+      const expectedShot = proSettings.shotType === 'wide' ? 'wide shot' : proSettings.shotType === 'close-up' ? 'close-up shot' : 'medium shot';
+      const hasCorrectShot = enhancedPrompt.toLowerCase().includes(expectedShot.toLowerCase());
+      console.log(`📐 ENHANCE-PROMPT: Shot type verification - Expected: ${expectedShot}, Found: ${hasCorrectShot ? '✅' : '❌'}`);
+    }
 
     return new Response(
       JSON.stringify({
