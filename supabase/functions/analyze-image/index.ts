@@ -22,32 +22,33 @@ serve(async (req: Request) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    if (!GOOGLE_GEMINI_API_KEY) {
+      throw new Error("GOOGLE_GEMINI_API_KEY is not configured");
     }
 
-    console.log("Analyzing image with AI...");
+    console.log("Analyzing image with Google Gemini...");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          {
-            role: "system",
-            content: "You are a professional cinematographer, VFX supervisor, and image analyst. Provide comprehensive cinematic analysis for video generation prompts. Extract ALL visual information including camera work, lighting setup, subject details, composition, and technical specifications."
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `CRITICAL: You MUST analyze this image and return a complete JSON object with ALL fields filled. Never leave any field empty or undefined.
+    // Extract base64 data if it includes the data URL prefix
+    const base64Data = imageBase64.includes('base64,') 
+      ? imageBase64.split('base64,')[1] 
+      : imageBase64;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `You are a professional cinematographer, VFX supervisor, and image analyst. Provide comprehensive cinematic analysis for video generation prompts. Extract ALL visual information including camera work, lighting setup, subject details, composition, and technical specifications.
+
+CRITICAL: You MUST analyze this image and return a complete JSON object with ALL fields filled. Never leave any field empty or undefined.
 
 Analyze this image for cinematic video generation and return EXACTLY this JSON structure with ALL fields completed:
 
@@ -83,20 +84,23 @@ RULES:
 3. Choose the most accurate option for each field
 4. Return valid JSON only, no explanations or markdown
 5. If unsure, pick the closest matching option`
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageBase64
+                },
+                {
+                  inline_data: {
+                    mime_type: 'image/jpeg',
+                    data: base64Data
+                  }
                 }
-              }
-            ]
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1000
           }
-        ],
-        temperature: 0.7,
-        modalities: ["image", "text"]
-      }),
-    });
+        }),
+      }
+    );
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -105,19 +109,13 @@ RULES:
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Credits depleted. Please add funds to your workspace." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      console.error("Google Gemini API error:", response.status, errorText);
+      throw new Error(`Google Gemini API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!content) {
       throw new Error("No response from AI");

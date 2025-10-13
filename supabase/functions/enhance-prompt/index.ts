@@ -121,9 +121,9 @@ serve(async (req: Request) => {
     
     const { originalPrompt, proSettings, targetWordCount, enhancementToggles } = requestBody;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    if (!GOOGLE_GEMINI_API_KEY) {
+      throw new Error("GOOGLE_GEMINI_API_KEY is not configured");
     }
 
     console.log("🔧 ENHANCE-PROMPT: Starting enhancement...");
@@ -393,28 +393,45 @@ NO introductions, NO headers, NO "Here's a..." - START IMMEDIATELY with the scen
 
 REWRITE:`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        temperature: 0.01, // Ultra low temperature for maximum compliance
-      }),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `${systemPrompt}\n\n${userPrompt}`
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.01,
+            maxOutputTokens: 500
+          }
+        }),
+      }
+    );
 
     if (!response.ok) {
-      throw new Error(`AI gateway error: ${response.status}`);
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const errorText = await response.text();
+      console.error("Google Gemini API error:", response.status, errorText);
+      throw new Error(`Google Gemini API error: ${response.status}`);
     }
 
     const data = await response.json();
-    let enhancedPrompt = data.choices?.[0]?.message?.content;
+    let enhancedPrompt = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!enhancedPrompt) {
       throw new Error("No enhanced prompt generated");

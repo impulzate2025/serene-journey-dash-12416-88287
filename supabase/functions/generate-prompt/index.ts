@@ -89,28 +89,37 @@ ${originalPrompt}
 
 REWRITE NOW:`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        temperature: 0.05, // Ultra low for maximum compliance
-      }),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `${systemPrompt}\n\n${userPrompt}`
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.05,
+            maxOutputTokens: 500
+          }
+        }),
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`Enhancement failed: ${response.status}`);
     }
 
     const data = await response.json();
-    const enhancedPrompt = data.choices?.[0]?.message?.content;
+    const enhancedPrompt = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (enhancedPrompt) {
       console.log("✅ Intelligent enhancement successful");
@@ -181,9 +190,9 @@ serve(async (req: Request) => {
       proSettings
     } = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    if (!GOOGLE_GEMINI_API_KEY) {
+      throw new Error("GOOGLE_GEMINI_API_KEY is not configured");
     }
 
     // EFFECT MAPPING - Convert IDs to descriptions
@@ -367,31 +376,41 @@ Generate a comprehensive cinematic VFX prompt (${minWords}-${maxWords} words) th
 
 Create a vivid, actionable prompt for video generation.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `${userPrompt}\n\nIMPORTANTE: Basar el prompt estrictamente en la imagen de referencia si se provee. No inventes escenarios que no estén presentes.`
-              },
-              ...(imageBase64 ? [{ type: "image_url", image_url: { url: imageBase64 } }] : [])
-            ]
+    const parts: any[] = [
+      {
+        text: `${systemPrompt}\n\n${userPrompt}\n\nIMPORTANTE: Basar el prompt estrictamente en la imagen de referencia si se provee. No inventes escenarios que no estén presentes.`
+      }
+    ];
+
+    if (imageBase64) {
+      const base64Data = imageBase64.includes('base64,') 
+        ? imageBase64.split('base64,')[1] 
+        : imageBase64;
+      
+      parts.push({
+        inline_data: {
+          mime_type: 'image/jpeg',
+          data: base64Data
+        }
+      });
+    }
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 500
           }
-        ],
-        temperature: 0.7,
-        modalities: ["image", "text"]
-      }),
-    });
+        }),
+      }
+    );
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -400,19 +419,13 @@ Create a vivid, actionable prompt for video generation.`;
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Credits depleted. Please add funds to your workspace." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      console.error("Google Gemini API error:", response.status, errorText);
+      throw new Error(`Google Gemini API error: ${response.status}`);
     }
 
     const data = await response.json();
-    let prompt = data.choices?.[0]?.message?.content;
+    let prompt = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!prompt) {
       throw new Error("No prompt generated");
@@ -429,7 +442,7 @@ Create a vivid, actionable prompt for video generation.`;
         console.log("Pro settings for enhancement:", JSON.stringify(proSettings, null, 2));
         
         try {
-          const enhancedResult = await enhancePromptIntelligently(proSettings.originalPrompt, proSettings, shotType, cameraAngle, cameraMovement, lensType, lightingSetup, LOVABLE_API_KEY);
+          const enhancedResult = await enhancePromptIntelligently(proSettings.originalPrompt, proSettings, shotType, cameraAngle, cameraMovement, lensType, lightingSetup, GOOGLE_GEMINI_API_KEY);
           console.log("✅ Enhancement completed");
           console.log("Enhanced prompt length:", enhancedResult.length);
           prompt = enhancedResult;
