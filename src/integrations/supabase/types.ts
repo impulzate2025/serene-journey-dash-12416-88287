@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      director_presets: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          settings: Json
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          settings: Json
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          settings?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       effect_templates: {
         Row: {
           category: string
@@ -53,10 +92,65 @@ export type Database = {
         }
         Relationships: []
       }
+      effects: {
+        Row: {
+          category: string
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          default_duration: string | null
+          default_intensity: number | null
+          description: string
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          is_premium: boolean | null
+          name: string
+          parameters: Json | null
+          prompt_template: string
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          default_duration?: string | null
+          default_intensity?: number | null
+          description: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_premium?: boolean | null
+          name: string
+          parameters?: Json | null
+          prompt_template: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          default_duration?: string | null
+          default_intensity?: number | null
+          description?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_premium?: boolean | null
+          name?: string
+          parameters?: Json | null
+          prompt_template?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       generations: {
         Row: {
           ai_analysis: Json | null
           created_at: string | null
+          deep_analysis: Json | null
           duration: string | null
           effect_category: string
           effect_description: string | null
@@ -72,6 +166,7 @@ export type Database = {
         Insert: {
           ai_analysis?: Json | null
           created_at?: string | null
+          deep_analysis?: Json | null
           duration?: string | null
           effect_category: string
           effect_description?: string | null
@@ -87,6 +182,7 @@ export type Database = {
         Update: {
           ai_analysis?: Json | null
           created_at?: string | null
+          deep_analysis?: Json | null
           duration?: string | null
           effect_category?: string
           effect_description?: string | null
