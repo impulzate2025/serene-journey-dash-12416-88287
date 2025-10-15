@@ -13,6 +13,8 @@ import { ProControls } from "@/components/ProControls";
 import { ProTeaser } from "@/components/ProTeaser";
 import { AIAnalysisDisplay } from "@/components/AIAnalysisDisplay";
 import { PromptEnhancer } from "@/components/PromptEnhancer";
+import { VariationsModal } from "@/components/VariationsModal";
+import { ExportMenu } from "@/components/ExportMenu";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
@@ -61,6 +63,11 @@ const Generator = () => {
   // NEW: Pro Mode State
   const [isProMode, setIsProMode] = useState(false);
   const [proSettings, setProSettings] = useState<any>({});
+  
+  // NEW: Variations State
+  const [variations, setVariations] = useState<any[]>([]);
+  const [showVariationsModal, setShowVariationsModal] = useState(false);
+  const [generatingVariations, setGeneratingVariations] = useState(false);
   
   const { toast } = useToast();
   const { signOut } = useAuth();
@@ -195,9 +202,32 @@ const Generator = () => {
 
       if (data?.prompt) {
         setGeneratedPrompt(data.prompt);
+        
+        // 🔥 SAVE TO DATABASE
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user) {
+          const { error: saveError } = await supabase
+            .from('generations')
+            .insert({
+              user_id: userData.user.id,
+              effect_category: selectedCategory,
+              effect_type: isProMode && proSettings.selectedEffect ? proSettings.selectedEffect : selectedEffect,
+              image_url: selectedImage,
+              ai_analysis: aiAnalysis,
+              generated_prompt: data.prompt,
+              intensity: isProMode && proSettings.intensity ? proSettings.intensity : intensity[0],
+              duration: duration,
+              style: 'cinematic'
+            });
+          
+          if (saveError) {
+            console.error('Error saving generation:', saveError);
+          }
+        }
+        
         toast({
           title: "✨ Prompt Generated",
-          description: "Your cinematic prompt is ready!",
+          description: "Saved to your history!",
         });
       }
     } catch (err) {
@@ -369,7 +399,8 @@ const Generator = () => {
             {aiAnalysis && (
               <AIAnalysisDisplay 
                 analysis={aiAnalysis} 
-                isProMode={isProMode && canUseProFeatures()} 
+                isProMode={isProMode && canUseProFeatures()}
+                imageUrl={selectedImage || undefined}
               />
             )}
 
@@ -392,19 +423,33 @@ const Generator = () => {
                 <Card className="bg-card border border-border animate-fade-in">
                   <div className="p-4 border-b border-border flex items-center justify-between">
                     <span className="text-sm font-medium">Generated Prompt</span>
-                    <Button variant="ghost" size="sm" onClick={handleCopy}>
-                      {copied ? (
-                        <>
-                          <Check className="w-4 h-4" />
-                          Copied
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-4 h-4" />
-                          Copy
-                        </>
-                      )}
-                    </Button>
+                    <div className="flex gap-2">
+                      <ExportMenu 
+                        prompt={generatedPrompt} 
+                        generationData={{ 
+                          prompt: generatedPrompt,
+                          effect_type: selectedEffect,
+                          effect_category: selectedCategory,
+                          ai_analysis: aiAnalysis,
+                          intensity: intensity[0],
+                          duration: duration,
+                          style: 'cinematic'
+                        }} 
+                      />
+                      <Button variant="ghost" size="sm" onClick={handleCopy}>
+                        {copied ? (
+                          <>
+                            <Check className="w-4 h-4" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4" />
+                            Copy
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                   <div className="p-6">
                     <p className="text-sm leading-relaxed text-foreground/90">{generatedPrompt}</p>
@@ -419,8 +464,68 @@ const Generator = () => {
                     onEnhancedPrompt={setEnhancedPrompt}
                   />
                 )}
+                
+                {/* Generate Variations Button - Pro Feature */}
+                {isProMode && canUseProFeatures() && (
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full"
+                    onClick={async () => {
+                      setGeneratingVariations(true);
+                      try {
+                        const { data, error } = await supabase.functions.invoke('generate-variations', {
+                          body: { 
+                            originalPrompt: generatedPrompt,
+                            aiAnalysis,
+                            proSettings
+                          }
+                        });
+                        
+                        if (error) {
+                          toast({
+                            title: 'Error',
+                            description: error.message,
+                            variant: 'destructive'
+                          });
+                        } else if (data?.variations) {
+                          setVariations(data.variations);
+                          setShowVariationsModal(true);
+                        }
+                      } catch (err) {
+                        toast({
+                          title: 'Error',
+                          description: 'Failed to generate variations',
+                          variant: 'destructive'
+                        });
+                      } finally {
+                        setGeneratingVariations(false);
+                      }
+                    }}
+                    disabled={generatingVariations}
+                  >
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    {generatingVariations ? 'Generating...' : 'Generate Variations'}
+                  </Button>
+                )}
               </div>
             )}
+            
+            {/* Variations Modal */}
+            <VariationsModal
+              open={showVariationsModal}
+              onOpenChange={setShowVariationsModal}
+              variations={variations}
+              onSelectVariation={(prompt) => {
+                setGeneratedPrompt(prompt);
+                setEnhancedPrompt('');
+                setShowVariationsModal(false);
+                toast({
+                  title: 'Variation Applied',
+                  description: 'Prompt updated successfully'
+                });
+              }}
+            />
           </div>
         </main>
 
