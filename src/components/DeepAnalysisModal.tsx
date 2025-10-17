@@ -2,7 +2,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, User, Shirt, Palette, Lightbulb, Box, Camera, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Sparkles, User, Shirt, Palette, Lightbulb, Box, Camera, MapPin, Download } from 'lucide-react';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { exportPrompt } from '@/lib/exportUtils';
 
 interface DeepAnalysisModalProps {
   open: boolean;
@@ -11,7 +16,68 @@ interface DeepAnalysisModalProps {
 }
 
 export const DeepAnalysisModal = ({ open, onOpenChange, analysis }: DeepAnalysisModalProps) => {
+  const { toast } = useToast();
+  const [selectedCategories, setSelectedCategories] = useState({
+    hair: true,
+    makeup: true,
+    accessories: true,
+    wardrobe: true,
+    textures: true,
+    props: true,
+    sceneContext: true,
+    advancedLighting: true
+  });
+
   if (!analysis) return null;
+
+  const toggleCategory = (category: string) => {
+    setSelectedCategories(prev => ({ ...prev, [category]: !prev[category] }));
+  };
+
+  const handleExport = (format: 'txt' | 'json' | 'markdown') => {
+    const filteredAnalysis = Object.entries(analysis)
+      .filter(([key]) => selectedCategories[key as keyof typeof selectedCategories])
+      .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+
+    try {
+      if (format === 'txt') {
+        const text = Object.entries(filteredAnalysis)
+          .map(([category, data]) => {
+            const header = `\n=== ${category.toUpperCase()} ===\n`;
+            const content = typeof data === 'object' 
+              ? Object.entries(data).map(([k, v]) => `${k}: ${v}`).join('\n')
+              : data;
+            return header + content;
+          })
+          .join('\n');
+        exportPrompt.toTXT(text, 'deep-analysis.txt');
+      } else if (format === 'json') {
+        exportPrompt.toJSON({ deep_analysis: filteredAnalysis }, 'deep-analysis.json');
+      } else if (format === 'markdown') {
+        const md = Object.entries(filteredAnalysis)
+          .map(([category, data]) => {
+            const header = `\n## ${category.charAt(0).toUpperCase() + category.slice(1)}\n`;
+            const content = typeof data === 'object'
+              ? Object.entries(data).map(([k, v]) => `- **${k}**: ${v}`).join('\n')
+              : data;
+            return header + content;
+          })
+          .join('\n');
+        exportPrompt.toTXT(`# Deep Analysis Results\n${md}`, 'deep-analysis.md');
+      }
+      
+      toast({
+        title: 'Exported Successfully',
+        description: `Deep analysis exported as ${format.toUpperCase()}`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Export Failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const renderSection = (title: string, data: any, icon: React.ReactNode) => (
     <Card className="p-4">
@@ -38,12 +104,47 @@ export const DeepAnalysisModal = ({ open, onOpenChange, analysis }: DeepAnalysis
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-purple-500" />
-            Deep Analysis Results
-            <Badge variant="secondary">Ultra-Detailed</Badge>
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-500" />
+              Deep Analysis Results
+              <Badge variant="secondary">Ultra-Detailed</Badge>
+            </DialogTitle>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => handleExport('txt')}>
+                <Download className="w-4 h-4 mr-2" />
+                TXT
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleExport('json')}>
+                <Download className="w-4 h-4 mr-2" />
+                JSON
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleExport('markdown')}>
+                <Download className="w-4 h-4 mr-2" />
+                MD
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
+
+        {/* Category Filters */}
+        <div className="border-b border-border pb-4">
+          <p className="text-sm text-muted-foreground mb-3">Select categories to export:</p>
+          <div className="grid grid-cols-4 gap-3">
+            {Object.entries(selectedCategories).map(([key, value]) => (
+              <div key={key} className="flex items-center space-x-2">
+                <Checkbox 
+                  id={key} 
+                  checked={value}
+                  onCheckedChange={() => toggleCategory(key)}
+                />
+                <label htmlFor={key} className="text-sm capitalize cursor-pointer">
+                  {key.replace(/([A-Z])/g, ' $1').trim()}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
 
         <Tabs defaultValue="hair" className="w-full">
           <TabsList className="grid w-full grid-cols-4">

@@ -30,15 +30,21 @@ const Dashboard = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar - Flora Style */}
         <aside className="w-16 border-r border-border bg-card flex flex-col items-center py-4 gap-4">
-          <Button variant="ghost" size="icon" className="w-12 h-12 bg-primary/10">
-            <Home className="w-5 h-5 text-primary" />
-          </Button>
-          <Button variant="ghost" size="icon" className="w-12 h-12">
-            <History className="w-5 h-5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="w-12 h-12">
-            <Settings className="w-5 h-5" />
-          </Button>
+          <Link to="/">
+            <Button variant="ghost" size="icon" className="w-12 h-12 bg-primary/10">
+              <Home className="w-5 h-5 text-primary" />
+            </Button>
+          </Link>
+          <Link to="/history">
+            <Button variant="ghost" size="icon" className="w-12 h-12">
+              <History className="w-5 h-5" />
+            </Button>
+          </Link>
+          <Link to="/settings">
+            <Button variant="ghost" size="icon" className="w-12 h-12">
+              <Settings className="w-5 h-5" />
+            </Button>
+          </Link>
           <div className="flex-1" />
           <Button variant="ghost" size="icon" className="w-12 h-12">
             <HelpCircle className="w-5 h-5" />

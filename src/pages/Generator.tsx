@@ -474,9 +474,10 @@ const Generator = () => {
                     onClick={async () => {
                       setGeneratingVariations(true);
                       try {
+                        const promptToVary = enhancedPrompt || generatedPrompt;
                         const { data, error } = await supabase.functions.invoke('generate-variations', {
                           body: { 
-                            originalPrompt: generatedPrompt,
+                            originalPrompt: promptToVary,
                             aiAnalysis,
                             proSettings
                           }
