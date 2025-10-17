@@ -140,12 +140,16 @@ const Library = () => {
               <Home className="w-5 h-5" />
             </Button>
           </Link>
-          <Button variant="ghost" size="icon" className="w-12 h-12">
-            <History className="w-5 h-5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="w-12 h-12">
-            <Settings className="w-5 h-5" />
-          </Button>
+          <Link to="/history">
+            <Button variant="ghost" size="icon" className="w-12 h-12">
+              <History className="w-5 h-5" />
+            </Button>
+          </Link>
+          <Link to="/settings">
+            <Button variant="ghost" size="icon" className="w-12 h-12">
+              <Settings className="w-5 h-5" />
+            </Button>
+          </Link>
           <div className="flex-1" />
           <Button variant="ghost" size="icon" className="w-12 h-12">
             <HelpCircle className="w-5 h-5" />
