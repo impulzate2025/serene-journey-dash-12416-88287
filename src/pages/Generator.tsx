@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,35 +17,13 @@ import { VariationsModal } from "@/components/VariationsModal";
 import { ExportMenu } from "@/components/ExportMenu";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
+import { groupEffectsByCategory } from '@/lib/effectsUtils';
 
 const imageUploadSchema = z.object({
   file: z.instanceof(File)
     .refine((f) => f.size <= 10 * 1024 * 1024, 'File size must be less than 10MB')
     .refine((f) => f.type.startsWith('image/'), 'File must be an image'),
 });
-
-const effectCategories = [
-  {
-    value: "visual",
-    label: "Visual Effects",
-    effects: ["Portal Effect", "Explosion", "Disintegration", "Turning Metal", "Melting", "Set on Fire"]
-  },
-  {
-    value: "eyes",
-    label: "Eyes & Face",
-    effects: ["Eyes In (Signature)", "Laser Eyes", "Glowing Eyes", "Face Morph"]
-  },
-  {
-    value: "camera",
-    label: "Camera Controls",
-    effects: ["Crash Zoom", "Dolly Zoom", "FPV Drone", "360° Orbit", "Crane Shot"]
-  },
-  {
-    value: "energy",
-    label: "Energy & Light",
-    effects: ["Lightning Strike", "Energy Aura", "Hologram", "Light Beams"]
-  },
-];
 
 const Generator = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -69,9 +47,51 @@ const Generator = () => {
   const [showVariationsModal, setShowVariationsModal] = useState(false);
   const [generatingVariations, setGeneratingVariations] = useState(false);
   
+  // Dynamic effects from database
+  const [effectCategories, setEffectCategories] = useState<any[]>([]);
+  const [isLoadingEffects, setIsLoadingEffects] = useState(true);
+  
   const { toast } = useToast();
   const { signOut } = useAuth();
   const { subscription, canUseProFeatures, canGenerate } = useSubscription();
+
+  // Load effects from database
+  useEffect(() => {
+    const loadEffects = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('effects')
+          .select('*')
+          .eq('is_active', true)
+          .order('category', { ascending: true })
+          .order('name', { ascending: true });
+
+        if (error) throw error;
+
+        if (data) {
+          const grouped = groupEffectsByCategory(data);
+          setEffectCategories(grouped);
+          
+          // Set default effect if current one doesn't exist
+          if (grouped.length > 0 && grouped[0].effects.length > 0) {
+            setSelectedEffect(grouped[0].effects[0].name);
+            setSelectedCategory(grouped[0].value);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading effects:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load effects. Please refresh the page.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingEffects(false);
+      }
+    };
+
+    loadEffects();
+  }, [toast]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();

@@ -8,7 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Camera, Lightbulb, Sparkles, Palette, Zap, Eye, Move, Gauge, Waves, Focus, RotateCcw } from 'lucide-react';
 
-// COMPLETE EFFECTS DATABASE - 24 Effects
+// Effects will be loaded dynamically from database
+import { supabase } from '@/integrations/supabase/client';
+import { formatEffectsForProControls } from '@/lib/effectsUtils';
+
 interface Effect {
     id: string;
     name: string;
@@ -17,42 +20,14 @@ interface Effect {
     pro?: boolean;
 }
 
-const EFFECTS_DATABASE: Record<string, Effect[]> = {
-    visual: [
-        { id: 'portal-effect', name: 'Portal Effect', description: 'Portal dimensional detrás del sujeto', tags: ['popular', '3d'] },
-        { id: 'building-explosion', name: 'Building Explosion', description: 'Explosión cinematográfica realista', tags: ['action', '3d'], pro: true },
-        { id: 'disintegration', name: 'Disintegration', description: 'Desintegración en partículas luminosas', tags: ['magic'] },
-        { id: 'turning-metal', name: 'Turning Metal', description: 'Transformación en metal realista', tags: ['transform'] },
-        { id: 'melting-effect', name: 'Melting Effect', description: 'Efecto de derretimiento con física real', tags: ['physics'] },
-        { id: 'set-on-fire', name: 'Set on Fire', description: 'Ignición realista con física de fuego', tags: ['fire', 'action'], pro: true }
-    ],
-    eyes: [
-        { id: 'eyes-in', name: 'Eyes In (Mouth to Tunnel)', description: 'Zoom a través de los ojos - Signature effect', tags: ['signature', 'popular'], pro: true },
-        { id: 'laser-eyes', name: 'Laser Eyes', description: 'Rayos láser desde los ojos', tags: ['energy'] },
-        { id: 'glowing-eyes', name: 'Glowing Eyes', description: 'Ojos brillantes con energía', tags: ['glow'] },
-        { id: 'face-morph', name: 'Face Morph', description: 'Morphing facial cinematográfico', tags: ['transform'], pro: true }
-    ],
-    camera: [
-        { id: 'crash-zoom', name: 'Crash Zoom In', description: 'Zoom dramático de alta velocidad', tags: ['popular'] },
-        { id: 'dolly-zoom', name: 'Dolly Zoom', description: 'Efecto Vertigo (Hitchcock)', tags: ['classic'], pro: true },
-        { id: 'fpv-drone', name: 'FPV Drone Shot', description: 'Cinematografía de dron FPV', tags: ['drone', 'popular'], pro: true },
-        { id: '360-orbit', name: '360° Orbit', description: 'Movimiento orbital 360 grados', tags: ['360'] },
-        { id: 'crane-shot', name: 'Crane Up/Down', description: 'Movimiento de grúa revelador', tags: ['reveal'] },
-        { id: 'handheld', name: 'Handheld Camera', description: 'Cámara en mano documental', tags: ['documentary'] }
-    ],
-    energy: [
-        { id: 'lightning-strike', name: 'Lightning Strike', description: 'Rayo impactando al sujeto', tags: ['energy'] },
-        { id: 'energy-aura', name: 'Energy Aura', description: 'Aura de energía envolvente', tags: ['glow'] },
-        { id: 'hologram', name: 'Hologram', description: 'Efecto holográfico futurista', tags: ['sci-fi'], pro: true },
-        { id: 'light-beams', name: 'Light Beams', description: 'Rayos de luz dramáticos', tags: ['light'] }
-    ],
-    atmospheric: [
-        { id: 'smoke-reveal', name: 'Smoke Reveal', description: 'Revelación a través del humo', tags: ['reveal'] },
-        { id: 'fog-roll', name: 'Fog Roll', description: 'Niebla cinematográfica rodante', tags: ['atmospheric'] },
-        { id: 'dust-particles', name: 'Dust Particles', description: 'Partículas de polvo volumétricas', tags: ['particles'] },
-        { id: 'rain-effect', name: 'Rain Effect', description: 'Lluvia cinematográfica', tags: ['weather'] }
-    ]
-};
+interface DirectorPreset {
+    id: string;
+    name: string;
+    description: string;
+    settings: any;
+    category: string;
+    icon: string;
+}
 
 interface ProControlsProps {
     onSettingsChange: (settings: any) => void;
@@ -61,6 +36,12 @@ interface ProControlsProps {
 }
 
 export const ProControls = ({ onSettingsChange, imageAnalysis, selectedEffect }: ProControlsProps) => {
+    // Dynamic data from database
+    const [effectsDatabase, setEffectsDatabase] = useState<Record<string, Effect[]>>({});
+    const [directorPresets, setDirectorPresets] = useState<DirectorPreset[]>([]);
+    const [isLoadingEffects, setIsLoadingEffects] = useState(true);
+    const [isLoadingPresets, setIsLoadingPresets] = useState(true);
+
     const [settings, setSettings] = useState({
         // EFFECT SELECTION (NEW - PRIORITY)
         effectCategory: 'visual',
@@ -141,6 +122,57 @@ export const ProControls = ({ onSettingsChange, imageAnalysis, selectedEffect }:
         onSettingsChange(newSettings);
     };
 
+    // Load effects from database
+    useEffect(() => {
+        const loadEffects = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('effects')
+                    .select('*')
+                    .eq('is_active', true)
+                    .order('category', { ascending: true });
+
+                if (error) throw error;
+
+                if (data) {
+                    const formatted = formatEffectsForProControls(data);
+                    setEffectsDatabase(formatted);
+                }
+            } catch (error) {
+                console.error('Error loading effects:', error);
+            } finally {
+                setIsLoadingEffects(false);
+            }
+        };
+
+        loadEffects();
+    }, []);
+
+    // Load director presets from database
+    useEffect(() => {
+        const loadPresets = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('director_presets')
+                    .select('*')
+                    .eq('is_active', true)
+                    .order('name', { ascending: true });
+
+                if (error) throw error;
+
+                if (data) {
+                    setDirectorPresets(data);
+                }
+            } catch (error) {
+                console.error('Error loading presets:', error);
+            } finally {
+                setIsLoadingPresets(false);
+            }
+        };
+
+        loadPresets();
+    }, []);
+
     // Send initial settings when component mounts
     useEffect(() => {
         console.log('🚀 ProControls mounted, sending initial settings');
@@ -148,8 +180,24 @@ export const ProControls = ({ onSettingsChange, imageAnalysis, selectedEffect }:
     }, []); // Only run once on mount
 
     // Get current category effects
-    const currentEffects = EFFECTS_DATABASE[settings.effectCategory as keyof typeof EFFECTS_DATABASE] || [];
+    const currentEffects = effectsDatabase[settings.effectCategory as keyof typeof effectsDatabase] || [];
     const selectedEffectData = currentEffects.find(e => e.id === settings.selectedEffect);
+
+    // Apply preset function
+    const applyPreset = (preset: DirectorPreset) => {
+        try {
+            const presetSettings = typeof preset.settings === 'string' 
+                ? JSON.parse(preset.settings) 
+                : preset.settings;
+            
+            const newSettings = { ...settings, ...presetSettings };
+            setSettings(newSettings);
+            onSettingsChange(newSettings);
+            console.log(`🎬 DIRECTOR SETUP: Applied ${preset.name}`);
+        } catch (error) {
+            console.error('Error applying preset:', error);
+        }
+    };
 
     // 🎯 INTELLIGENT MOVEMENT COMPOSER
     const getIntelligentMovementDescription = () => {
@@ -331,54 +379,37 @@ export const ProControls = ({ onSettingsChange, imageAnalysis, selectedEffect }:
                 </div>
             </Card>
 
-            {/* 🎬 DIRECTOR QUICK SETUPS */}
+            {/* 🎬 DIRECTOR QUICK SETUPS - Dynamic from Database */}
             <Card className="p-3 border-amber-200 dark:border-amber-800">
                 <div className="flex items-center gap-2 mb-2">
                     <Camera className="w-4 h-4 text-amber-500" />
                     <Label className="text-xs font-medium">Director Quick Setups</Label>
                     <Badge variant="secondary" className="text-xs">Pro</Badge>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                    <button
-                        onClick={() => {
-                            const fpvTopSetup = {
-                                ...settings,
-                                cameraAngle: 'high-angle',
-                                cameraMovement: 'fpv-drone',
-                                movementDirection: 'top-view', // This triggers the special combination
-                                movementSpeed: 'normal',
-                                movementStyle: 'smooth',
-                                lensType: '24mm-wide',
-                                optimizationInstructions: 'FPV drone 360 movement' // Simplified and direct
-                            };
-                            setSettings(fpvTopSetup);
-                            onSettingsChange(fpvTopSetup);
-                            console.log('🎬 DIRECTOR SETUP: Applied FPV 360° Top View');
-                            console.log('🎯 INTELLIGENT RESULT:', getIntelligentMovementDescription());
-                        }}
-                        className="p-2 text-xs bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded hover:from-blue-700 hover:to-purple-700 transition-all"
-                    >
-                        🚁 FPV 360° Top
-                    </button>
-                    <button
-                        onClick={() => {
-                            const crashZoomSetup = {
-                                ...settings,
-                                cameraAngle: 'low-angle',
-                                cameraMovement: 'crash-zoom',
-                                movementSpeed: 'dramatic',
-                                movementStyle: 'mechanical',
-                                shotType: 'close-up'
-                            };
-                            setSettings(crashZoomSetup);
-                            onSettingsChange(crashZoomSetup);
-                            console.log('🎬 DIRECTOR SETUP: Applied Dramatic Crash Zoom');
-                        }}
-                        className="p-2 text-xs bg-gradient-to-r from-red-600 to-orange-600 text-white rounded hover:from-red-700 hover:to-orange-700 transition-all"
-                    >
-                        ⚡ Crash Zoom
-                    </button>
-                </div>
+                
+                {isLoadingPresets ? (
+                    <div className="text-xs text-muted-foreground text-center py-4">
+                        Loading presets...
+                    </div>
+                ) : directorPresets.length === 0 ? (
+                    <div className="text-xs text-muted-foreground text-center py-4">
+                        No presets available. Create some in Settings.
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                        {directorPresets.map((preset) => (
+                            <button
+                                key={preset.id}
+                                onClick={() => applyPreset(preset)}
+                                className="p-2 text-xs bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded hover:from-blue-700 hover:to-purple-700 transition-all flex items-center justify-center gap-1"
+                                title={preset.description}
+                            >
+                                {preset.icon && <span>{preset.icon}</span>}
+                                <span className="truncate">{preset.name}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
             </Card>
 
             {/* Prompt Length Selector */}
