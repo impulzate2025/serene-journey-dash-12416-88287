@@ -31,12 +31,21 @@ export const groupEffectsByCategory = (effects: Effect[]): EffectCategory[] => {
   // Only include active effects
   const activeEffects = effects.filter(e => e.is_active);
   
-  const grouped = activeEffects.reduce((acc: Record<string, Effect[]>, effect) => {
+  const grouped = activeEffects.reduce((acc: Record<string, any[]>, effect) => {
     const category = effect.category.toLowerCase();
     if (!acc[category]) {
       acc[category] = [];
     }
-    acc[category].push(effect);
+    // Transform DB format to UI format
+    acc[category].push({
+      id: effect.id,
+      name: effect.name,
+      description: effect.description,
+      isPremium: effect.is_premium,
+      tags: [effect.category, effect.is_premium ? 'Pro' : 'Free'],
+      icon: effect.icon,
+      color: effect.color
+    });
     return acc;
   }, {});
 

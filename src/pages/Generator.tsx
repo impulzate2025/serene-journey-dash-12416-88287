@@ -591,7 +591,7 @@ const Generator = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border">
                   {effectCategories.find(c => c.value === selectedCategory)?.effects.map(effect => (
-                    <SelectItem key={effect} value={effect}>{effect}</SelectItem>
+                    <SelectItem key={effect.id} value={effect.name}>{effect.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
